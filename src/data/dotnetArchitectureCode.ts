@@ -41,14 +41,32 @@ public enum SubscriptionStatus
     Exhausted = 4
 }
 
+public class GymClub
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public required string Name { get; set; } // نام باشگاه
+    public required string Code { get; set; } // مثلاً CLUB-101
+    public required string ClubType { get; set; } // Bodybuilding, MultiPurpose, MartialArts, PoolSpa
+    public required string City { get; set; }
+    public required string Address { get; set; }
+    public required string Phone { get; set; }
+    public required string ManagerName { get; set; }
+    public int DailyCapacity { get; set; } = 300;
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
 public class AppUser
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public required string Username { get; set; } // نام کاربری جهت لاگین
     public required string FullName { get; set; }
     public required string NationalCode { get; set; } // کد ملی ۱۰ رقمی
     public required string MobileNumber { get; set; } // 0912xxxxxxx
-    public required string PasswordHash { get; set; }
+    public required string PasswordHash { get; set; } // کلمه عبور هش‌شده
     public UserRole Role { get; set; } = UserRole.Member;
+    public Guid? AssignedClubId { get; set; }
+    public GymClub? AssignedClub { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

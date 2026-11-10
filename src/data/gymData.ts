@@ -1,8 +1,33 @@
 export type UserRole = 'SuperAdmin' | 'Receptionist' | 'Coach' | 'Member';
 
+export interface GymClub {
+  id: string;
+  ownerId?: string;
+  name: string;
+  code: string;
+  clubType: 'Bodybuilding' | 'MultiPurpose' | 'MartialArts' | 'PoolSpa' | 'WomenOnly';
+  city: string;
+  address: string;
+  phone: string;
+  managerName: string;
+  capacity: number;
+  status: 'Active' | 'Maintenance';
+  createdShamsi: string;
+}
+
+export interface AuthAccount {
+  username: string;
+  password?: string;
+  fullName: string;
+  role: UserRole;
+  assignedClubCode: string;
+  title: string;
+}
+
 export interface GymMember {
   id: string;
   ownerId?: string;
+  clubCode?: string;
   fullName: string;
   nationalCode: string;
   phone: string;
@@ -50,6 +75,7 @@ export interface FinancialRecord {
 
 export interface LockerItem {
   id: string;
+  ownerId?: string;
   lockerNumber: string;
   zone: 'VIP' | 'Standard';
   status: 'Available' | 'Occupied' | 'ExpiringSoon' | 'Maintenance';
@@ -69,8 +95,18 @@ export interface CanteenProduct {
   unit: string;
 }
 
+export interface ClassBookingEntry {
+  id: string;
+  memberId: string;
+  memberName: string;
+  membershipCode: string;
+  bookedAtShamsi: string;
+  attended: boolean;
+}
+
 export interface GymClassItem {
   id: string;
+  ownerId?: string;
   title: string;
   coachName: string;
   scheduleDays: string;
@@ -79,6 +115,7 @@ export interface GymClassItem {
   enrolledCount: number;
   tuitionFee: number;
   hallName: string;
+  enrolledMembers: ClassBookingEntry[];
   workoutRoutine: {
     dayTitle: string;
     exercises: { move: string; sets: string; tempo: string; notes: string }[];
@@ -102,9 +139,83 @@ export interface SmsLogItem {
   deliveryStatus: 'Delivered' | 'Queued';
 }
 
+export const INITIAL_CLUBS: GymClub[] = [
+  {
+    id: 'club_101',
+    name: 'باشگاه بدنسازی و کراس‌فیت پارس‌جیم (شعبه مرکزی سعادت‌آباد)',
+    code: 'CLUB-101',
+    clubType: 'Bodybuilding',
+    city: 'تهران',
+    address: 'سعادت‌آباد، میدان کاج، بلوار سرو غربی، پلاک ۴۲',
+    phone: '02122084510',
+    managerName: 'مهندس ساسان جمالی',
+    capacity: 350,
+    status: 'Active',
+    createdShamsi: '۱۴۰۳/۰۱/۱۵',
+  },
+  {
+    id: 'club_102',
+    name: 'مجموعه ورزشی چندمنظوره و استخر آرتمیس (شعبه جردن)',
+    code: 'CLUB-102',
+    clubType: 'MultiPurpose',
+    city: 'تهران',
+    address: 'بلوار آفریقا (جردن)، بالاتر از چهارراه جهان کودک، کوچه صانعی',
+    phone: '02188793211',
+    managerName: 'دکتر نیما فرهمند',
+    capacity: 500,
+    status: 'Active',
+    createdShamsi: '۱۴۰۴/۰۴/۱۰',
+  },
+  {
+    id: 'club_103',
+    name: 'آکادمی تخصصی بوکس و هنرهای رزمی تختی (شعبه انقلاب)',
+    code: 'CLUB-103',
+    clubType: 'MartialArts',
+    city: 'تهران',
+    address: 'خیابان سئول، جنب مجموعه ورزشی انقلاب، سالن شماره ۳',
+    phone: '02126219040',
+    managerName: 'استاد بهرام افشار',
+    capacity: 180,
+    status: 'Active',
+    createdShamsi: '۱۴۰۴/۰۹/۰۱',
+  },
+];
+
+export const INITIAL_AUTH_ACCOUNTS: AuthAccount[] = [
+  {
+    username: 'admin',
+    fullName: 'مهندس ساسان جمالی (مدیر کل)',
+    role: 'SuperAdmin',
+    assignedClubCode: 'CLUB-101',
+    title: 'مدیر کل مجموعه‌های ورزشی (Super Admin)',
+  },
+  {
+    username: 'reception',
+    fullName: 'امیررضا کاظمی (مسئول پذیرش)',
+    role: 'Receptionist',
+    assignedClubCode: 'CLUB-101',
+    title: 'مسئول پذیرش و کنترل گیت (Receptionist)',
+  },
+  {
+    username: 'coach',
+    fullName: 'استاد سهراب مرادی (مربی ارشد)',
+    role: 'Coach',
+    assignedClubCode: 'CLUB-101',
+    title: 'مربی رسمی بدنسازی و تغذیه (Coach)',
+  },
+  {
+    username: 'member',
+    fullName: 'آرش کریمی (ورزشکار VIP)',
+    role: 'Member',
+    assignedClubCode: 'CLUB-101',
+    title: 'ورزشکار عضو باشگاه (Member)',
+  },
+];
+
 export const INITIAL_MEMBERS: GymMember[] = [
   {
     id: 'mem_1001',
+    clubCode: 'CLUB-101',
     fullName: 'آرش کریمی',
     nationalCode: '0018492031',
     phone: '09123456781',
@@ -122,6 +233,7 @@ export const INITIAL_MEMBERS: GymMember[] = [
   },
   {
     id: 'mem_1002',
+    clubCode: 'CLUB-101',
     fullName: 'سارا نادری',
     nationalCode: '0029183746',
     phone: '09129876543',
@@ -139,6 +251,7 @@ export const INITIAL_MEMBERS: GymMember[] = [
   },
   {
     id: 'mem_1003',
+    clubCode: 'CLUB-101',
     fullName: 'محمدرضا طاهری',
     nationalCode: '0074629182',
     phone: '09354433221',
@@ -156,6 +269,7 @@ export const INITIAL_MEMBERS: GymMember[] = [
   },
   {
     id: 'mem_1004',
+    clubCode: 'CLUB-103',
     fullName: 'کیانوش رستمی‌پور',
     nationalCode: '0491827364',
     phone: '09191122334',
@@ -173,6 +287,7 @@ export const INITIAL_MEMBERS: GymMember[] = [
   },
   {
     id: 'mem_1005',
+    clubCode: 'CLUB-102',
     fullName: 'مهسا تهرانی',
     nationalCode: '0065432198',
     phone: '09121119988',
@@ -304,12 +419,16 @@ export const INITIAL_LOCKERS: LockerItem[] = [
   { id: 'loc_4', lockerNumber: 'VIP-04', zone: 'VIP', status: 'Occupied', assignedMemberName: 'آرش کریمی', assignedMemberCode: 'GYM-1405-1001', expiresAtShamsi: '۱۴۰۵/۱۰/۰۴', monthlyRate: 650000 },
   { id: 'loc_5', lockerNumber: 'VIP-05', zone: 'VIP', status: 'ExpiringSoon', assignedMemberName: 'امیرحسین علوی', assignedMemberCode: 'GYM-1405-1008', expiresAtShamsi: '۱۴۰۵/۰۸/۲۰', monthlyRate: 650000 },
   { id: 'loc_6', lockerNumber: 'VIP-06', zone: 'VIP', status: 'Maintenance', assignedMemberName: 'قفل دیجیتال در دست تعمیر', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 650000 },
-  { id: 'loc_7', lockerNumber: 'A-10', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
-  { id: 'loc_8', lockerNumber: 'A-11', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
-  { id: 'loc_9', lockerNumber: 'A-12', zone: 'Standard', status: 'ExpiringSoon', assignedMemberName: 'سارا نادری', assignedMemberCode: 'GYM-1405-1002', expiresAtShamsi: '۱۴۰۵/۰۸/۲۳', monthlyRate: 300000 },
-  { id: 'loc_10', lockerNumber: 'A-13', zone: 'Standard', status: 'Occupied', assignedMemberName: 'پویا رستگار', assignedMemberCode: 'GYM-1405-1009', expiresAtShamsi: '۱۴۰۵/۰۹/۲۸', monthlyRate: 300000 },
-  { id: 'loc_11', lockerNumber: 'A-14', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
-  { id: 'loc_12', lockerNumber: 'A-15', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
+  { id: 'loc_7', lockerNumber: 'VIP-07', zone: 'VIP', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 650000 },
+  { id: 'loc_8', lockerNumber: 'VIP-08', zone: 'VIP', status: 'Occupied', assignedMemberName: 'کیانوش رستمی‌پور', assignedMemberCode: 'GYM-1405-1004', expiresAtShamsi: '۱۴۰۵/۰۹/۱۵', monthlyRate: 650000 },
+  { id: 'loc_9', lockerNumber: 'A-10', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
+  { id: 'loc_10', lockerNumber: 'A-11', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
+  { id: 'loc_11', lockerNumber: 'A-12', zone: 'Standard', status: 'ExpiringSoon', assignedMemberName: 'سارا نادری', assignedMemberCode: 'GYM-1405-1002', expiresAtShamsi: '۱۴۰۵/۰۸/۲۳', monthlyRate: 300000 },
+  { id: 'loc_12', lockerNumber: 'A-13', zone: 'Standard', status: 'Occupied', assignedMemberName: 'پویا رستگار', assignedMemberCode: 'GYM-1405-1009', expiresAtShamsi: '۱۴۰۵/۰۹/۲۸', monthlyRate: 300000 },
+  { id: 'loc_13', lockerNumber: 'A-14', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
+  { id: 'loc_14', lockerNumber: 'A-15', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
+  { id: 'loc_15', lockerNumber: 'A-16', zone: 'Standard', status: 'Occupied', assignedMemberName: 'محمدرضا طاهری', assignedMemberCode: 'GYM-1405-1003', expiresAtShamsi: '۱۴۰۵/۰۹/۱۴', monthlyRate: 300000 },
+  { id: 'loc_16', lockerNumber: 'A-17', zone: 'Standard', status: 'Available', assignedMemberName: '-', assignedMemberCode: '-', expiresAtShamsi: '-', monthlyRate: 300000 },
 ];
 
 export const INITIAL_CANTEEN: CanteenProduct[] = [
@@ -330,9 +449,27 @@ export const INITIAL_CLASSES: GymClassItem[] = [
     scheduleDays: 'شنبه، دوشنبه، چهارشنبه',
     timeSlot: '۱۷:۰۰ تا ۱۹:۳۰',
     capacity: 25,
-    enrolledCount: 21,
+    enrolledCount: 24,
     tuitionFee: 2850000,
     hallName: 'سالن اصلی وزنه (طبقه اول)',
+    enrolledMembers: [
+      {
+        id: 'bk_101',
+        memberId: 'mem_1001',
+        memberName: 'آرش کریمی',
+        membershipCode: 'GYM-1405-1001',
+        bookedAtShamsi: '۱۴۰۵/۰۸/۱۶ - ۱۰:۲۰',
+        attended: true,
+      },
+      {
+        id: 'bk_102',
+        memberId: 'mem_1003',
+        memberName: 'محمدرضا طاهری',
+        membershipCode: 'GYM-1405-1003',
+        bookedAtShamsi: '۱۴۰۵/۰۸/۱۷ - ۱۲:۱۰',
+        attended: false,
+      },
+    ],
     workoutRoutine: [
       {
         dayTitle: 'روز اول: سینه + جلوبازو + شکم',
@@ -366,10 +503,28 @@ export const INITIAL_CLASSES: GymClassItem[] = [
     coachName: 'مربی نیلوفر رحیمی',
     scheduleDays: 'یکشنبه، سه‌شنبه، پنجشنبه',
     timeSlot: '۱۶:۰۰ تا ۱۷:۳۰',
-    capacity: 18,
+    capacity: 16,
     enrolledCount: 16,
     tuitionFee: 2400000,
     hallName: 'استودیو فانکشنال (طبقه دوم)',
+    enrolledMembers: [
+      {
+        id: 'bk_201',
+        memberId: 'mem_1002',
+        memberName: 'سارا نادری',
+        membershipCode: 'GYM-1405-1002',
+        bookedAtShamsi: '۱۴۰۵/۰۸/۱۵ - ۱۶:۰۰',
+        attended: true,
+      },
+      {
+        id: 'bk_202',
+        memberId: 'mem_1005',
+        memberName: 'مهسا تهرانی',
+        membershipCode: 'GYM-1405-1005',
+        bookedAtShamsi: '۱۴۰۵/۰۸/۱۶ - ۱۱:۴۵',
+        attended: true,
+      },
+    ],
     workoutRoutine: [
       {
         dayTitle: 'بلوک متابولیک و استقامت عضلانی (WOD)',
@@ -396,6 +551,16 @@ export const INITIAL_CLASSES: GymClassItem[] = [
     enrolledCount: 14,
     tuitionFee: 2600000,
     hallName: 'رینگ اختصاصی رزمی',
+    enrolledMembers: [
+      {
+        id: 'bk_301',
+        memberId: 'mem_1004',
+        memberName: 'کیانوش رستمی‌پور',
+        membershipCode: 'GYM-1405-1004',
+        bookedAtShamsi: '۱۴۰۵/۰۸/۱۴ - ۱۹:۳۰',
+        attended: true,
+      },
+    ],
     workoutRoutine: [
       {
         dayTitle: 'تکنیک، میت‌زنی و هوازی بی‌هوازی',

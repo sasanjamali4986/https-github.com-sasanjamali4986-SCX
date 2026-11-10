@@ -18,12 +18,17 @@ import {
   FinancialRecord,
   SmsLogItem,
   GymMember,
+  UserRole,
   PEAK_HOURS_DATA,
 } from '../data/gymData';
+import { ClassBookingAndCoachView } from './ClassBookingAndCoachView';
+import { LockerGridMapWidget } from './LockerGridMapWidget';
 
 interface OperationsHubViewProps {
   activeSubTab: 'LOCKERS' | 'CANTEEN' | 'CLASSES' | 'FINANCIAL_SMS';
   onChangeSubTab: (tab: 'LOCKERS' | 'CANTEEN' | 'CLASSES' | 'FINANCIAL_SMS') => void;
+  currentRole: UserRole;
+  onSwitchRole: (role: UserRole) => void;
   lockers: LockerItem[];
   onUpdateLocker: (lockerId: string, updates: Partial<LockerItem>) => void;
   canteenProducts: CanteenProduct[];
@@ -33,7 +38,22 @@ interface OperationsHubViewProps {
     buyerName: string
   ) => Promise<void>;
   classes: GymClassItem[];
-  onBookClassSeat: (classId: string) => void;
+  onBookClassForMember: (classId: string, member: GymMember) => Promise<{
+    success: boolean;
+    message: string;
+  }>;
+  onCancelClassBooking: (classId: string, memberId: string) => Promise<void>;
+  onUpdateClassCapacity: (classId: string, newCapacity: number) => Promise<void>;
+  onToggleClassAttendance: (classId: string, bookingId: string) => void;
+  onCreateNewClass: (newClassData: {
+    title: string;
+    coachName: string;
+    scheduleDays: string;
+    timeSlot: string;
+    hallName: string;
+    capacity: number;
+    tuitionFee: number;
+  }) => Promise<void>;
   transactions: FinancialRecord[];
   onAddTransaction: (tx: Omit<FinancialRecord, 'id'>) => Promise<void>;
   smsLogs: SmsLogItem[];
@@ -44,12 +64,18 @@ interface OperationsHubViewProps {
 export const OperationsHubView: React.FC<OperationsHubViewProps> = ({
   activeSubTab,
   onChangeSubTab,
+  currentRole,
+  onSwitchRole,
   lockers,
   onUpdateLocker,
   canteenProducts,
   onCheckoutCanteenPos,
   classes,
-  onBookClassSeat,
+  onBookClassForMember,
+  onCancelClassBooking,
+  onUpdateClassCapacity,
+  onToggleClassAttendance,
+  onCreateNewClass,
   transactions,
   onAddTransaction,
   smsLogs,
@@ -208,146 +234,15 @@ export const OperationsHubView: React.FC<OperationsHubViewProps> = ({
         </button>
       </div>
 
-      {/* 1. LOCKERS MANAGEMENT */}
+      {/* 1. VISUAL GRAPHICAL LOCKER GRID MAP WIDGET */}
       {activeSubTab === 'LOCKERS' && (
-        <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                مدیریت نقشه کمدها (VIP و عمومی) و قراردادهای رهن/اجاره
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                برای تحویل کمد به ورزشکار، آزادسازی یا ثبت وضعیت تعمیرات، روی کمد مورد نظر کلیک نمایید.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 font-mono tabular-nums">
-              <span>خالی: {lockers.filter((l) => l.status === 'Available').length}</span>
-              <span aria-hidden="true">·</span>
-              <span>اشغال: {lockers.filter((l) => l.status === 'Occupied').length}</span>
-              <span aria-hidden="true">·</span>
-              <span>سررسید نزدیک: {lockers.filter((l) => l.status === 'ExpiringSoon').length}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {lockers.map((locker) => {
-              const statusStyle =
-                locker.status === 'Available'
-                  ? 'border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/40 dark:bg-emerald-950/20'
-                  : locker.status === 'ExpiringSoon'
-                  ? 'border-amber-300 dark:border-amber-800/80 bg-amber-50/40 dark:bg-amber-950/20'
-                  : locker.status === 'Maintenance'
-                  ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/40 dark:bg-rose-950/20'
-                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/60';
-
-              const statusText =
-                locker.status === 'Available'
-                  ? 'خالی (آماده واگذاری)'
-                  : locker.status === 'Occupied'
-                  ? 'در اجاره ورزشکار'
-                  : locker.status === 'ExpiringSoon'
-                  ? 'در آستانه سررسید'
-                  : 'خراب / در دست تعمیر';
-
-              return (
-                <div
-                  key={locker.id}
-                  onClick={() => setSelectedLocker(locker)}
-                  className={`p-4 rounded-xl border transition-colors cursor-pointer hover:border-emerald-500 ${statusStyle}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono tabular-nums font-bold text-base text-slate-900 dark:text-slate-100">
-                      {locker.lockerNumber}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      بخش {locker.zone}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    {statusText}
-                  </div>
-
-                  <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-slate-800/70 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                    <div>ورزشکار: {locker.assignedMemberName}</div>
-                    <div className="font-mono tabular-nums">
-                      سررسید: {locker.expiresAtShamsi} · {locker.monthlyRate.toLocaleString('fa-IR')} ت
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {selectedLocker && (
-            <div className="p-5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-3 flex-1">
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  تنظیم وضعیت و قرارداد کمد شماره{' '}
-                  <span className="font-mono">{selectedLocker.lockerNumber}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div>
-                    <label className="block text-slate-500 mb-1">انتخاب ورزشکار</label>
-                    <select
-                      value={lockerMemberName}
-                      onChange={(e) => setLockerMemberName(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
-                    >
-                      {members.map((m) => (
-                        <option key={m.id} value={m.fullName}>
-                          {m.fullName} ({m.membershipCode})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-slate-500 mb-1">تاریخ سررسید اجاره (شمسی)</label>
-                    <input
-                      type="text"
-                      value={lockerExpires}
-                      onChange={(e) => setLockerExpires(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono tabular-nums text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const found = members.find((m) => m.fullName === lockerMemberName);
-                        onUpdateLocker(selectedLocker.id, {
-                          status: 'Occupied',
-                          assignedMemberName: lockerMemberName,
-                          assignedMemberCode: found?.membershipCode || 'GYM-1405-1001',
-                          expiresAtShamsi: lockerExpires,
-                        });
-                        setSelectedLocker(null);
-                      }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      ثبت واگذاری کمد
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onUpdateLocker(selectedLocker.id, {
-                          status: 'Available',
-                          assignedMemberName: '-',
-                          assignedMemberCode: '-',
-                          expiresAtShamsi: '-',
-                        });
-                        setSelectedLocker(null);
-                      }}
-                      className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg whitespace-nowrap cursor-pointer"
-                    >
-                      آزادسازی کمد
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
+        <LockerGridMapWidget
+          lockers={lockers}
+          members={members}
+          currentRole={currentRole}
+          onSwitchRole={onSwitchRole}
+          onUpdateLocker={onUpdateLocker}
+        />
       )}
 
       {/* 2. CANTEEN POS & INVENTORY */}
@@ -525,146 +420,19 @@ export const OperationsHubView: React.FC<OperationsHubViewProps> = ({
         </div>
       )}
 
-      {/* 3. CLASSES, COACHES & WORKOUT / DIET PLAN */}
+      {/* 3. CLASSES, COACH CAPACITY & MEMBER BOOKING */}
       {activeSubTab === 'CLASSES' && (
-        <div className="space-y-6">
-          <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">
-              تقویم هفتگی کلاس‌های گروهی، ظرفیت سالن و رزرو آنلاین
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
-              انتخاب هر کلاس، برنامه تمرینی (Workout Plan) و رژیم غذایی نمونه آن دوره را در پایین نمایش می‌دهد.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {classes.map((cls) => {
-                const isSelected = cls.id === selectedClassId;
-                const isFull = cls.enrolledCount >= cls.capacity;
-
-                return (
-                  <div
-                    key={cls.id}
-                    onClick={() => setSelectedClassId(cls.id)}
-                    className={`p-5 rounded-xl border transition-colors cursor-pointer flex flex-col justify-between gap-4 ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                        {cls.title}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {cls.coachName} · {cls.hallName}
-                      </div>
-                      <div className="text-xs font-mono tabular-nums text-slate-700 dark:text-slate-300 mt-2">
-                        {cls.scheduleDays} · ساعت {cls.timeSlot}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono tabular-nums">
-                        <span className="text-slate-500">ظرفیت تکمیل‌شده:</span>
-                        <span className="font-bold text-slate-900 dark:text-slate-100">
-                          {cls.enrolledCount} / {cls.capacity} نفر
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500"
-                          style={{
-                            width: `${Math.min(100, Math.round((cls.enrolledCount / cls.capacity) * 100))}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="font-mono tabular-nums text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          {cls.tuitionFee.toLocaleString('fa-IR')} تومان
-                        </span>
-                        <button
-                          type="button"
-                          disabled={isFull}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onBookClassSeat(cls.id);
-                          }}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-medium rounded-md transition-colors cursor-pointer"
-                        >
-                          {isFull ? 'تکمیل ظرفیت' : 'رزرو آنلاین کلاس'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {selectedClass && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  برنامه تمرینی اختصاصی (Workout Plan) — {selectedClass.title}
-                </h3>
-                {selectedClass.workoutRoutine.map((routine) => (
-                  <div key={routine.dayTitle} className="space-y-2">
-                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      {routine.dayTitle}
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-right border-collapse text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500">
-                            <th className="py-2 px-2">حرکت تمرینی</th>
-                            <th className="py-2 px-2">ست و تکرار</th>
-                            <th className="py-2 px-2">تمپو</th>
-                            <th className="py-2 px-2">نکات مربی</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
-                          {routine.exercises.map((ex) => (
-                            <tr key={ex.move}>
-                              <td className="py-2 px-2 font-semibold text-slate-900 dark:text-slate-100">
-                                {ex.move}
-                              </td>
-                              <td className="py-2 px-2 font-mono tabular-nums">{ex.sets}</td>
-                              <td className="py-2 px-2 font-mono tabular-nums">{ex.tempo}</td>
-                              <td className="py-2 px-2 text-slate-500 dark:text-slate-400">
-                                {ex.notes}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </section>
-
-              <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  رژیم غذایی و ماکروها (Diet Plan) — تنظیم‌شده توسط {selectedClass.coachName}
-                </h3>
-                <div className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-                  {selectedClass.dietPlan.map((meal) => (
-                    <div key={meal.meal} className="py-3 space-y-1">
-                      <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-slate-100">
-                        <span>{meal.meal}</span>
-                        <span className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
-                          {meal.calories} kcal · پروتئین: {meal.proteinGrams}g
-                        </span>
-                      </div>
-                      <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {meal.items}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-        </div>
+        <ClassBookingAndCoachView
+          classes={classes}
+          members={members}
+          currentRole={currentRole}
+          onSwitchRole={onSwitchRole}
+          onBookClassForMember={onBookClassForMember}
+          onCancelClassBooking={onCancelClassBooking}
+          onUpdateClassCapacity={onUpdateClassCapacity}
+          onToggleClassAttendance={onToggleClassAttendance}
+          onCreateNewClass={onCreateNewClass}
+        />
       )}
 
       {/* 4. FINANCIALS, ZARINPAL, SMS & PEAK HOURS ANALYTICS */}

@@ -6,6 +6,31 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+type UserRole = 'SuperAdmin' | 'Receptionist' | 'Coach' | 'Member';
+
+interface ServerAuthAccount {
+  username: string;
+  password: string;
+  fullName: string;
+  role: UserRole;
+  assignedClubCode: string;
+  title: string;
+}
+
+interface ServerClubRecord {
+  id: string;
+  name: string;
+  code: string;
+  clubType: 'Bodybuilding' | 'MultiPurpose' | 'MartialArts' | 'PoolSpa' | 'WomenOnly';
+  city: string;
+  address: string;
+  phone: string;
+  managerName: string;
+  capacity: number;
+  status: 'Active' | 'Maintenance';
+  createdShamsi: string;
+}
+
 interface ServerMemberRecord {
   id: string;
   fullName: string;
@@ -23,6 +48,104 @@ interface ServerMemberRecord {
   status: 'Active' | 'Expired' | 'Suspended';
   lockerNumber: string;
 }
+
+const serverAccounts: Map<string, ServerAuthAccount> = new Map([
+  [
+    'admin',
+    {
+      username: 'admin',
+      password: '123456',
+      fullName: 'مهندس ساسان جمالی (مدیر کل)',
+      role: 'SuperAdmin',
+      assignedClubCode: 'CLUB-101',
+      title: 'مدیر کل مجموعه‌های ورزشی (Super Admin)',
+    },
+  ],
+  [
+    'reception',
+    {
+      username: 'reception',
+      password: '123456',
+      fullName: 'امیررضا کاظمی (مسئول پذیرش)',
+      role: 'Receptionist',
+      assignedClubCode: 'CLUB-101',
+      title: 'مسئول پذیرش و کنترل گیت (Receptionist)',
+    },
+  ],
+  [
+    'coach',
+    {
+      username: 'coach',
+      password: '123456',
+      fullName: 'استاد سهراب مرادی (مربی ارشد)',
+      role: 'Coach',
+      assignedClubCode: 'CLUB-101',
+      title: 'مربی رسمی بدنسازی و تغذیه (Coach)',
+    },
+  ],
+  [
+    'member',
+    {
+      username: 'member',
+      password: '123456',
+      fullName: 'آرش کریمی (ورزشکار VIP)',
+      role: 'Member',
+      assignedClubCode: 'CLUB-101',
+      title: 'ورزشکار عضو باشگاه (Member)',
+    },
+  ],
+]);
+
+const serverClubs: Map<string, ServerClubRecord> = new Map([
+  [
+    'CLUB-101',
+    {
+      id: 'club_101',
+      name: 'باشگاه بدنسازی و کراس‌فیت پارس‌جیم (شعبه مرکزی سعادت‌آباد)',
+      code: 'CLUB-101',
+      clubType: 'Bodybuilding',
+      city: 'تهران',
+      address: 'سعادت‌آباد، میدان کاج، بلوار سرو غربی، پلاک ۴۲',
+      phone: '02122084510',
+      managerName: 'مهندس ساسان جمالی',
+      capacity: 350,
+      status: 'Active',
+      createdShamsi: '۱۴۰۳/۰۱/۱۵',
+    },
+  ],
+  [
+    'CLUB-102',
+    {
+      id: 'club_102',
+      name: 'مجموعه ورزشی چندمنظوره و استخر آرتمیس (شعبه جردن)',
+      code: 'CLUB-102',
+      clubType: 'MultiPurpose',
+      city: 'تهران',
+      address: 'بلوار آفریقا (جردن)، بالاتر از چهارراه جهان کودک، کوچه صانعی',
+      phone: '02188793211',
+      managerName: 'دکتر نیما فرهمند',
+      capacity: 500,
+      status: 'Active',
+      createdShamsi: '۱۴۰۴/۰۴/۱۰',
+    },
+  ],
+  [
+    'CLUB-103',
+    {
+      id: 'club_103',
+      name: 'آکادمی تخصصی بوکس و هنرهای رزمی تختی (شعبه انقلاب)',
+      code: 'CLUB-103',
+      clubType: 'MartialArts',
+      city: 'تهران',
+      address: 'خیابان سئول، جنب مجموعه ورزشی انقلاب، سالن شماره ۳',
+      phone: '02126219040',
+      managerName: 'استاد بهرام افشار',
+      capacity: 180,
+      status: 'Active',
+      createdShamsi: '۱۴۰۴/۰۹/۰۱',
+    },
+  ],
+]);
 
 // In-memory transactional mirror for fast Axios check-in verification
 const serverMembers: Map<string, ServerMemberRecord> = new Map([
@@ -134,6 +257,139 @@ async function startServer() {
 
   app.use(express.json());
 
+  // 1. Username & Password Login API Endpoint (POST /api/auth/login)
+  app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body as {
+      username?: string;
+      password?: string;
+    };
+
+    const cleanUser = (username || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    if (!cleanUser || !cleanPass) {
+      return res.status(400).json({
+        success: false,
+        message: 'لطفاً نام کاربری و کلمه عبور را به صورت کامل وارد نمایید.',
+      });
+    }
+
+    if (cleanPass.length < 4) {
+      return res.status(401).json({
+        success: false,
+        message: 'کلمه عبور واردشده معتبر نیست (حداقل ۴ کاراکتر).',
+      });
+    }
+
+    const foundAccount = serverAccounts.get(cleanUser);
+    if (foundAccount) {
+      if (foundAccount.password !== cleanPass) {
+        return res.status(401).json({
+          success: false,
+          message: 'کلمه عبور برای این نام کاربری اشتباه است. (رمز پیش‌فرض دمو: 123456)',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `خوش آمدید، ${foundAccount.fullName}`,
+        account: {
+          username: foundAccount.username,
+          fullName: foundAccount.fullName,
+          role: foundAccount.role,
+          assignedClubCode: foundAccount.assignedClubCode,
+          title: foundAccount.title,
+        },
+      });
+    }
+
+    // Allow custom username login as SuperAdmin if not matching preset usernames
+    const customAccount: ServerAuthAccount = {
+      username: cleanUser,
+      password: cleanPass,
+      fullName: `${username?.trim()} (مدیر سیستم)`,
+      role: 'SuperAdmin',
+      assignedClubCode: 'CLUB-101',
+      title: 'مدیر کل باشگاه (Super Admin)',
+    };
+    serverAccounts.set(cleanUser, customAccount);
+
+    return res.status(200).json({
+      success: true,
+      message: `ورود با موفقیت انجام شد — خوش آمدید ${customAccount.fullName}`,
+      account: {
+        username: customAccount.username,
+        fullName: customAccount.fullName,
+        role: customAccount.role,
+        assignedClubCode: customAccount.assignedClubCode,
+        title: customAccount.title,
+      },
+    });
+  });
+
+  // 2. Get Clubs & Create New Gym/Club API Endpoints (/api/clubs)
+  app.get('/api/clubs', (_req, res) => {
+    res.json({ clubs: Array.from(serverClubs.values()) });
+  });
+
+  app.post('/api/clubs', (req, res) => {
+    const {
+      role,
+      name,
+      code,
+      clubType,
+      city,
+      address,
+      phone,
+      managerName,
+      capacity,
+      status,
+    } = req.body as Partial<ServerClubRecord> & { role?: UserRole };
+
+    if (role && role !== 'SuperAdmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'فقط مدیر کل (Super Admin) مجاز به تعریف و ثبت باشگاه جدید در سامانه است.',
+      });
+    }
+
+    if (!name || !name.trim() || !city || !address || !phone || !managerName) {
+      return res.status(400).json({
+        success: false,
+        message: 'لطفاً نام باشگاه، شهر، آدرس، تلفن و نام مدیر باشگاه را وارد نمایید.',
+      });
+    }
+
+    const cleanCode = (code || `CLUB-${101 + serverClubs.size}`).trim().toUpperCase();
+    if (serverClubs.has(cleanCode)) {
+      return res.status(409).json({
+        success: false,
+        message: `باشگاهی با کد اختصاصی «${cleanCode}» قبلاً در سیستم ثبت شده است.`,
+      });
+    }
+
+    const newClub: ServerClubRecord = {
+      id: `club_${Date.now()}`,
+      name: name.trim(),
+      code: cleanCode,
+      clubType: clubType || 'Bodybuilding',
+      city: city.trim(),
+      address: address.trim(),
+      phone: phone.trim(),
+      managerName: managerName.trim(),
+      capacity: Math.max(10, Number(capacity) || 250),
+      status: status || 'Active',
+      createdShamsi: '۱۴۰۵/۰۸/۱۸',
+    };
+
+    serverClubs.set(cleanCode, newClub);
+    return res.status(201).json({
+      success: true,
+      message: `باشگاه «${newClub.name}» با کد ${newClub.code} با موفقیت تعریف و فعال شد.`,
+      club: newClub,
+    });
+  });
+
   // Sync member state from client/Firestore into backend mirror
   app.post('/api/members/sync', (req, res) => {
     const { members } = req.body as { members?: ServerMemberRecord[] };
@@ -164,7 +420,6 @@ async function startServer() {
       });
     }
 
-    // Use provided snapshot if synced from Firestore or lookup by code / nationalCode / id
     let member: ServerMemberRecord | undefined = memberSnapshot;
     if (!member) {
       for (const item of serverMembers.values()) {
@@ -191,7 +446,6 @@ async function startServer() {
     const expDate = new Date(member.expirationDate);
     const isDateExpired = isNaN(expDate.getTime()) ? false : expDate.getTime() < now.getTime();
 
-    // Rule 1: Prevent check-in if subscription is expired or suspended
     if (member.status === 'Suspended') {
       return res.status(403).json({
         success: false,
@@ -210,7 +464,6 @@ async function startServer() {
       });
     }
 
-    // Rule 2: Prevent check-in if remaining sessions == 0
     if (member.remainingSessions <= 0) {
       return res.status(403).json({
         success: false,
@@ -220,7 +473,6 @@ async function startServer() {
       });
     }
 
-    // Rule 3: Atomically deduct exactly ONE session
     const newRemaining = member.remainingSessions - 1;
     const assignedLocker =
       requestedLocker && requestedLocker.trim() !== ''

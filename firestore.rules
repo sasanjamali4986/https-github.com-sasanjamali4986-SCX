@@ -50,6 +50,75 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
+    function isValidClub(data) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'code', 'clubType', 'city', 'address',
+          'phone', 'managerName', 'capacity', 'status', 'createdShamsi', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'name', 'code', 'clubType', 'city', 'address',
+          'phone', 'managerName', 'capacity', 'status', 'createdShamsi', 'createdAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.code is string && data.code.size() >= 3 && data.code.size() <= 24 && data.code.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubType is string && data.clubType.size() <= 20 && data.clubType in ['Bodybuilding', 'MultiPurpose', 'MartialArts', 'PoolSpa', 'WomenOnly'] &&
+        data.city is string && data.city.size() >= 2 && data.city.size() <= 50 &&
+        data.address is string && data.address.size() >= 4 && data.address.size() <= 200 &&
+        data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 15 &&
+        data.managerName is string && data.managerName.size() >= 2 && data.managerName.size() <= 80 &&
+        data.capacity is int && data.capacity >= 10 && data.capacity <= 5000 &&
+        data.status is string && data.status.size() <= 20 && data.status in ['Active', 'Maintenance'] &&
+        data.createdShamsi is string && data.createdShamsi.size() >= 4 && data.createdShamsi.size() <= 20 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidGymClass(data) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'coachName', 'scheduleDays', 'timeSlot',
+          'hallName', 'capacity', 'enrolledCount', 'tuitionFee', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'title', 'coachName', 'scheduleDays', 'timeSlot',
+          'hallName', 'capacity', 'enrolledCount', 'tuitionFee', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 80 &&
+        data.coachName is string && data.coachName.size() >= 2 && data.coachName.size() <= 80 &&
+        data.scheduleDays is string && data.scheduleDays.size() >= 2 && data.scheduleDays.size() <= 60 &&
+        data.timeSlot is string && data.timeSlot.size() >= 2 && data.timeSlot.size() <= 40 &&
+        data.hallName is string && data.hallName.size() >= 2 && data.hallName.size() <= 60 &&
+        data.capacity is int && data.capacity >= 1 && data.capacity <= 500 &&
+        data.enrolledCount is int && data.enrolledCount >= 0 && data.enrolledCount <= data.capacity &&
+        data.tuitionFee is int && data.tuitionFee >= 0 && data.tuitionFee <= 1000000000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidLocker(data) {
+      return data.keys().hasAll([
+          'ownerId', 'lockerNumber', 'zone', 'status', 'assignedMemberName',
+          'assignedMemberCode', 'expiresAtShamsi', 'monthlyRate', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'lockerNumber', 'zone', 'status', 'assignedMemberName',
+          'assignedMemberCode', 'expiresAtShamsi', 'monthlyRate', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.lockerNumber is string && data.lockerNumber.size() >= 2 && data.lockerNumber.size() <= 16 &&
+        data.zone is string && data.zone.size() <= 16 && data.zone in ['VIP', 'Standard'] &&
+        data.status is string && data.status.size() <= 20 && data.status in ['Available', 'Occupied', 'ExpiringSoon', 'Maintenance'] &&
+        data.assignedMemberName is string && data.assignedMemberName.size() >= 1 && data.assignedMemberName.size() <= 80 &&
+        data.assignedMemberCode is string && data.assignedMemberCode.size() >= 1 && data.assignedMemberCode.size() <= 32 &&
+        data.expiresAtShamsi is string && data.expiresAtShamsi.size() >= 1 && data.expiresAtShamsi.size() <= 24 &&
+        data.monthlyRate is int && data.monthlyRate >= 0 && data.monthlyRate <= 100000000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
     function isValidMember(data) {
       return data.keys().hasAll([
           'ownerId', 'fullName', 'nationalCode', 'phone', 'membershipCode',
@@ -141,6 +210,51 @@ service cloud.firestore {
       allow create: if isValidId(adminId) && isValidAdmin(incoming()) && isAdmin() && incoming().createdAt == request.time;
       allow update: if isValidAdmin(incoming()) && isValidId(adminId) && isAdmin() && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt;
       allow delete: if isValidId(adminId) && isAdmin();
+    }
+
+    match /clubs/{clubId} {
+      allow get: if isValidId(clubId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(clubId) && isValidClub(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidClub(incoming()) && isValidId(clubId) && (isOwner(existing().ownerId) || isAdmin()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'clubType', 'city', 'address', 'phone', 'managerName', 'capacity', 'status']);
+      allow delete: if isValidId(clubId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    match /classes/{classId} {
+      allow get: if isValidId(classId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(classId) && isValidGymClass(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidGymClass(incoming()) && isValidId(classId) && (isOwner(existing().ownerId) || isAdmin()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          // Action 1: Member Booking (+1) or Cancellation (-1)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['enrolledCount', 'updatedAt']) &&
+           incoming().enrolledCount <= existing().capacity) ||
+          // Action 2: Coach Capacity & Schedule Update
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'coachName', 'scheduleDays', 'timeSlot', 'hallName', 'capacity', 'enrolledCount', 'tuitionFee', 'updatedAt'])
+        );
+      allow delete: if isValidId(classId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    match /lockers/{lockerId} {
+      allow get: if isValidId(lockerId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(lockerId) && isValidLocker(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidLocker(incoming()) && isValidId(lockerId) && (isOwner(existing().ownerId) || isAdmin()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'assignedMemberName', 'assignedMemberCode', 'expiresAtShamsi', 'monthlyRate', 'updatedAt'
+        ]);
+      allow delete: if isValidId(lockerId) && (isOwner(existing().ownerId) || isAdmin());
     }
 
     match /members/{memberId} {
