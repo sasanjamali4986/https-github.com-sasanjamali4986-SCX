@@ -1,0 +1,286 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "System administrator record for elevated RBAC privileges",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["SuperAdmin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Gym member profile and active subscription tracking",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "nationalCode": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{10}$"
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 11,
+          "maxLength": 11,
+          "pattern": "^09[0-9]{9}$"
+        },
+        "membershipCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "bloodType": {
+          "type": "string",
+          "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        },
+        "medicalNotes": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "planTitle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "coachName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "totalSessions": {
+          "type": "integer"
+        },
+        "remainingSessions": {
+          "type": "integer"
+        },
+        "expirationDate": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "expirationShamsi": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Expired", "Suspended"]
+        },
+        "lockerNumber": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "fullName",
+        "nationalCode",
+        "phone",
+        "membershipCode",
+        "bloodType",
+        "medicalNotes",
+        "planTitle",
+        "coachName",
+        "totalSessions",
+        "remainingSessions",
+        "expirationDate",
+        "expirationShamsi",
+        "status",
+        "lockerNumber",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Member check-in and session deduction log",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "memberId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "memberName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "membershipCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "planTitle": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "checkInShamsi": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "remainingSessionsAfter": {
+          "type": "integer"
+        },
+        "lockerAssigned": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Allowed", "Denied"]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "memberId",
+        "memberName",
+        "membershipCode",
+        "planTitle",
+        "checkInShamsi",
+        "remainingSessionsAfter",
+        "lockerAssigned",
+        "status",
+        "notes",
+        "createdAt"
+      ]
+    },
+    "FinancialTransaction": {
+      "title": "FinancialTransaction",
+      "description": "Financial ledger record for gym income, buffet POS, and expenses",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Tuition", "Buffet", "Locker", "CoachSalary", "Rent", "Maintenance"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Income", "Expense"]
+        },
+        "amount": {
+          "type": "integer"
+        },
+        "taxAmount": {
+          "type": "integer"
+        },
+        "discountCode": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "paymentGateway": {
+          "type": "string",
+          "enum": ["ZarinPal", "PayPing", "SamanSEP", "POS", "Cash"]
+        },
+        "trackingCode": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "memberName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "dateShamsi": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "category",
+        "type",
+        "amount",
+        "taxAmount",
+        "discountCode",
+        "paymentGateway",
+        "trackingCode",
+        "memberName",
+        "dateShamsi",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "System administrators collection"
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Gym members and subscriptions collection"
+    },
+    "/attendances/{attendanceId}": {
+      "schema": { "$ref": "#/entities/Attendance" },
+      "description": "Member check-in attendance logs"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/FinancialTransaction" },
+      "description": "Gym accounting income and expense records"
+    }
+  }
+}

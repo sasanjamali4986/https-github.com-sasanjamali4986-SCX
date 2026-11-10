@@ -1,0 +1,189 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(ownerId) {
+      return isVerifiedUser() && request.auth.uid == ownerId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'sasanjamali.eorc@gmail.com'
+      );
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap)
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.role is string && data.role.size() <= 20 && data.role in ['SuperAdmin'] &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll([
+          'ownerId', 'fullName', 'nationalCode', 'phone', 'membershipCode',
+          'bloodType', 'medicalNotes', 'planTitle', 'coachName',
+          'totalSessions', 'remainingSessions', 'expirationDate', 'expirationShamsi',
+          'status', 'lockerNumber', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'fullName', 'nationalCode', 'phone', 'membershipCode',
+          'bloodType', 'medicalNotes', 'planTitle', 'coachName',
+          'totalSessions', 'remainingSessions', 'expirationDate', 'expirationShamsi',
+          'status', 'lockerNumber', 'createdAt', 'updatedAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 80 &&
+        data.nationalCode is string && data.nationalCode.size() == 10 && data.nationalCode.matches('^[0-9]{10}$') &&
+        data.phone is string && data.phone.size() == 11 && data.phone.matches('^09[0-9]{9}$') &&
+        data.membershipCode is string && data.membershipCode.size() >= 4 && data.membershipCode.size() <= 32 && data.membershipCode.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.bloodType is string && data.bloodType.size() <= 5 && data.bloodType in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] &&
+        data.medicalNotes is string && data.medicalNotes.size() <= 300 &&
+        data.planTitle is string && data.planTitle.size() >= 2 && data.planTitle.size() <= 80 &&
+        data.coachName is string && data.coachName.size() >= 2 && data.coachName.size() <= 80 &&
+        data.totalSessions is int && data.totalSessions >= 1 && data.totalSessions <= 365 &&
+        data.remainingSessions is int && data.remainingSessions >= 0 && data.remainingSessions <= data.totalSessions &&
+        data.expirationDate is string && data.expirationDate.size() >= 8 && data.expirationDate.size() <= 32 &&
+        data.expirationShamsi is string && data.expirationShamsi.size() >= 6 && data.expirationShamsi.size() <= 20 &&
+        data.status is string && data.status.size() <= 20 && data.status in ['Active', 'Expired', 'Suspended'] &&
+        data.lockerNumber is string && data.lockerNumber.size() <= 16 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll([
+          'ownerId', 'memberId', 'memberName', 'membershipCode',
+          'planTitle', 'checkInShamsi', 'remainingSessionsAfter',
+          'lockerAssigned', 'status', 'notes', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'memberId', 'memberName', 'membershipCode',
+          'planTitle', 'checkInShamsi', 'remainingSessionsAfter',
+          'lockerAssigned', 'status', 'notes', 'createdAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.memberId is string && data.memberId.size() >= 1 && data.memberId.size() <= 128 && data.memberId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.memberName is string && data.memberName.size() >= 2 && data.memberName.size() <= 80 &&
+        data.membershipCode is string && data.membershipCode.size() >= 4 && data.membershipCode.size() <= 32 &&
+        data.planTitle is string && data.planTitle.size() >= 2 && data.planTitle.size() <= 80 &&
+        data.checkInShamsi is string && data.checkInShamsi.size() >= 4 && data.checkInShamsi.size() <= 40 &&
+        data.remainingSessionsAfter is int && data.remainingSessionsAfter >= 0 && data.remainingSessionsAfter <= 365 &&
+        data.lockerAssigned is string && data.lockerAssigned.size() <= 16 &&
+        data.status is string && data.status.size() <= 16 && data.status in ['Allowed', 'Denied'] &&
+        data.notes is string && data.notes.size() <= 160 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'category', 'type', 'amount', 'taxAmount',
+          'discountCode', 'paymentGateway', 'trackingCode', 'memberName',
+          'dateShamsi', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerId', 'title', 'category', 'type', 'amount', 'taxAmount',
+          'discountCode', 'paymentGateway', 'trackingCode', 'memberName',
+          'dateShamsi', 'createdAt'
+        ]) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+        data.category is string && data.category.size() <= 20 && data.category in ['Tuition', 'Buffet', 'Locker', 'CoachSalary', 'Rent', 'Maintenance'] &&
+        data.type is string && data.type.size() <= 12 && data.type in ['Income', 'Expense'] &&
+        data.amount is int && data.amount >= 0 && data.amount <= 10000000000 &&
+        data.taxAmount is int && data.taxAmount >= 0 && data.taxAmount <= 1000000000 &&
+        data.discountCode is string && data.discountCode.size() <= 30 &&
+        data.paymentGateway is string && data.paymentGateway.size() <= 20 && data.paymentGateway in ['ZarinPal', 'PayPing', 'SamanSEP', 'POS', 'Cash'] &&
+        data.trackingCode is string && data.trackingCode.size() <= 40 &&
+        data.memberName is string && data.memberName.size() <= 80 &&
+        data.dateShamsi is string && data.dateShamsi.size() >= 4 && data.dateShamsi.size() <= 30 &&
+        data.createdAt is timestamp;
+    }
+
+    // 4. Collection Match Blocks
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().uid == request.auth.uid;
+      allow create: if isValidId(adminId) && isValidAdmin(incoming()) && isAdmin() && incoming().createdAt == request.time;
+      allow update: if isValidAdmin(incoming()) && isValidId(adminId) && isAdmin() && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(adminId) && isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow get: if isValidId(memberId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(memberId) && isValidMember(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidMember(incoming()) && isValidId(memberId) && (isOwner(existing().ownerId) || isAdmin()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          // Action 1: Check-in Session Deduction
+          (incoming().diff(existing()).affectedKeys().hasOnly(['remainingSessions', 'status', 'lockerNumber', 'updatedAt']) &&
+           incoming().remainingSessions == existing().remainingSessions - 1 &&
+           existing().remainingSessions > 0 &&
+           existing().status == 'Active') ||
+          // Action 2: Subscription Renewal or Profile Update
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'phone', 'bloodType', 'medicalNotes', 'planTitle',
+            'coachName', 'totalSessions', 'remainingSessions', 'expirationDate',
+            'expirationShamsi', 'status', 'lockerNumber', 'updatedAt'
+          ])
+        );
+      allow delete: if isValidId(memberId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    match /attendances/{attendanceId} {
+      allow get: if isValidId(attendanceId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(attendanceId) && isValidAttendance(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/members/$(incoming().memberId)) &&
+        get(/databases/$(database)/documents/members/$(incoming().memberId)).data.ownerId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isValidId(attendanceId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isValidId(transactionId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isVerifiedUser() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(transactionId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+  }
+}

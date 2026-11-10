@@ -1,0 +1,6 @@
+{
+  "name": "ParsGym Pro — سامانه جامع مدیریت باشگاه ورزشی",
+  "description": "سیستم جامع مدیریت باشگاه‌های ورزشی ایران (بدنسازی، رزمی، استخر) همراه با پنل پذیرش، اسکن بارکد و کسر خودکار جلسات، مدیریت مالی، بوفه، کمدها و معماری کامل .NET 10 و SQL Server",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
